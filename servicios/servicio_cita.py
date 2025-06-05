@@ -1,32 +1,52 @@
 import socket
 
-def iniciar_servicio_cita():
-    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    sock.connect(('localhost', 5000))
-    try:
-        # Registro del servicio en el bus
-        mensaje_registro = b'00010sinitcita'
-        sock.sendall(mensaje_registro)
-        print("[CITA] Servicio de citas registrado.")
+# Crear socket TCP
+sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+bus_address = ('localhost', 5000)
+print('Conectando al bus en {}:{}'.format(*bus_address))
+sock.connect(bus_address)
 
-        while True:
-            encabezado = sock.recv(5)
-            if not encabezado:
+try:
+    # Enviar registro del servicio
+    mensaje_registro = b'00010sinitcitax'
+    print('Enviando registro: {!r}'.format(mensaje_registro))
+    sock.sendall(mensaje_registro)
+    sinit = True
+
+    while True:
+        print("Esperando transacción...")
+        amount_received = 0
+        amount_expected = int(sock.recv(5))
+
+        data = b''
+        while amount_received < amount_expected:
+            chunk = sock.recv(amount_expected - amount_received)
+            if not chunk:
                 break
-            longitud = int(encabezado.decode())
-            mensaje = sock.recv(longitud).decode()
-            print(f"[CITA] Mensaje recibido: {mensaje}")
+            data += chunk
+            amount_received += len(chunk)
 
-            # Simulación de procesamiento
-            respuesta_texto = f"[OK] Cita procesada: {mensaje}"
-            respuesta_bytes = respuesta_texto.encode()
-            longitud_respuesta = f"{len(respuesta_bytes):05}".encode()
-            sock.sendall(longitud_respuesta + respuesta_bytes)
+        print("Procesando mensaje recibido...")
+        print("Mensaje crudo:", data)
 
-    except Exception as e:
-        print(f"[!] Error en servicio_cita: {e}")
-    finally:
-        sock.close()
+        if sinit:
+            print("Registro recibido.")
+            sinit = False
+            continue
 
-if __name__ == "__main__":
-    iniciar_servicio_cita()
+        datos = data[5:].decode()
+        partes = datos.split("|")
+        if len(partes) == 3:
+            rut, fecha, hora = partes
+            respuesta = f"citaxOKCita agendada: {rut} el {fecha} a las {hora}"
+        else:
+            respuesta = "citaxNKFormato inválido"
+
+        respuesta_bytes = respuesta.encode()
+        mensaje_respuesta = f"{len(respuesta_bytes):05}".encode() + respuesta_bytes
+        print("Enviando respuesta:", mensaje_respuesta)
+        sock.sendall(mensaje_respuesta)
+
+finally:
+    print('Cerrando socket del servicio')
+    sock.close()

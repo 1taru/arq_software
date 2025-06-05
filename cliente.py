@@ -1,26 +1,43 @@
 import socket
 
-def enviar_mensaje_al_bus(servicio, contenido):
-    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    sock.connect(('localhost', 5000))
-    try:
-        mensaje = f"{servicio}{contenido}"
-        mensaje_codificado = mensaje.encode()
-        longitud = f"{len(mensaje_codificado):05}".encode()
-        print(f"[CLIENTE] Enviando mensaje: {mensaje}")
-        sock.sendall(longitud + mensaje_codificado)
+sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+bus_address = ('localhost', 5000)
+print('Conectando al bus en {}:{}'.format(*bus_address))
+sock.connect(bus_address)
 
-        # Recibir respuesta
-        encabezado = sock.recv(5)
-        longitud_respuesta = int(encabezado.decode())
-        respuesta = sock.recv(longitud_respuesta).decode()
-        print(f"[CLIENTE] Respuesta del servicio: {respuesta}")
-    finally:
-        sock.close()
-
-if __name__ == "__main__":
+try:
     while True:
-        contenido = input("Ingrese contenido de cita (ej: AGENDAR|RUT123|10-06|10:00): ")
-        if contenido.lower() == "salir":
+        continuar = input("¿Agendar una cita? (y/n): ")
+        if continuar.lower() != 'y':
             break
-        enviar_mensaje_al_bus("cita", contenido)
+
+        rut = input("RUT: ")
+        fecha = input("Fecha (YYYY-MM-DD): ")
+        hora = input("Hora (HH:MM): ")
+
+        datos = f"{rut}|{fecha}|{hora}"
+        mensaje = f"citax{datos}"
+        mensaje_bytes = mensaje.encode()
+        longitud = f"{len(mensaje_bytes):05}".encode()
+        full_message = longitud + mensaje_bytes
+
+        print("Enviando:", full_message)
+        sock.sendall(full_message)
+
+        print("Esperando respuesta...")
+        amount_received = 0
+        amount_expected = int(sock.recv(5))
+
+        data = b''
+        while amount_received < amount_expected:
+            chunk = sock.recv(amount_expected - amount_received)
+            if not chunk:
+                break
+            data += chunk
+            amount_received += len(chunk)
+
+        print("Respuesta recibida:", data.decode())
+
+finally:
+    print('Cerrando socket del cliente')
+    sock.close()
