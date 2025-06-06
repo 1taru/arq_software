@@ -8,7 +8,7 @@ sock.connect(bus_address)
 
 try:
     # Enviar registro del servicio
-    mensaje_registro = b'00010sinitcitax'
+    mensaje_registro = b'00010sinitreportes'
     print('Enviando registro: {!r}'.format(mensaje_registro))
     sock.sendall(mensaje_registro)
     sinit = True
@@ -36,11 +36,11 @@ try:
 
         datos = data[5:].decode()
         partes = datos.split("|")
-        if len(partes) == 3:
-            rut, fecha, hora = partes
-            respuesta = f"citaxOKCita agendada: {rut} el {fecha} a las {hora}"
+        if len(partes) == 2:
+            tipo_reporte, fecha = partes
+            respuesta = f"reportesOKReporte generado para {tipo_reporte} el {fecha}"
         else:
-            respuesta = "citaxNKFormato inválido"
+            respuesta = "reportesNKFormato inválido"
 
         respuesta_bytes = respuesta.encode()
         mensaje_respuesta = f"{len(respuesta_bytes):05}".encode() + respuesta_bytes

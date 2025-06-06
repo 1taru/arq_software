@@ -5,7 +5,7 @@ import sys
 sock = socket.socket (socket.AF_INET, socket.SOCK_STREAM)
 
 # Connect the socket to the port where the bus is listening
-bus_address = ('localhost', 5000)
+bus_address = ('localhost', 5050)
 print ('connecting to {} port {}'.format (*bus_address))
 sock.connect (bus_address)
 
